@@ -138,12 +138,6 @@ class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDel
         let historyItem = HistoryItem()
         historyItem.text = code
 
-        let realm = try! Realm()
-
-        try! realm.write({
-            realm.add(historyItem)
-        })
-
         navigationController?.pushViewController(showedViewController, animated: true)
 
         print(code)

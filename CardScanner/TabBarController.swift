@@ -22,10 +22,10 @@ class TabBarController: UITabBarController {
 
     private func prepareViewControllers() {
         self.viewControllers = [
-            prepareViewController(title: "Profile", imageName: "person.fill",
-                                  viewController: ProfileViewController()),
             prepareViewController(title: "Scanner", imageName: "qrcode",
-                                  viewController: ScannerViewController())]
+                                  viewController: ScannerViewController()),
+            prepareViewController(title: "Create", imageName: "plus.circle",
+                              viewController: CreatingViewController())]
     }
 
     private func prepareViewController(title: String?, imageName: String?,

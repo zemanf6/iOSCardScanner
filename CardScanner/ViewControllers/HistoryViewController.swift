@@ -13,18 +13,22 @@ class HistoryViewController: UIViewController, UITableViewDelegate, UITableViewD
 
     private var tableView = UITableView()
 
-    var items: [HistoryItem]?
+    var items = [HistoryItem]()
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let realm = try! Realm()
+        let item = HistoryItem()
 
-        items?.append(contentsOf: realm.objects(HistoryItem.self))
+        item.text = "Ahoj"
+        items.append(item)
 
         tableView.dataSource = self
         tableView.delegate = self
+
         prepareView()
+
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
     }
 
     private func prepareView() {
@@ -40,15 +44,15 @@ class HistoryViewController: UIViewController, UITableViewDelegate, UITableViewD
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return items?.count ?? 0
+        return self.items.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell()
+        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as? HistoryCell
 
-        cell.textLabel?.text = items?[indexPath.row].text
+        cell?.item = items[indexPath.row]
 
-        return cell
+        return cell ?? HistoryCell()
     }
 
 

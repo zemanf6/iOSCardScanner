@@ -6,8 +6,8 @@
 //
 
 import Foundation
-import RealmSwift
 
-class HistoryItem: Object {
-    @objc dynamic var text = ""
+class HistoryItem {
+    var text = String()
+    var date = Date()
 }
