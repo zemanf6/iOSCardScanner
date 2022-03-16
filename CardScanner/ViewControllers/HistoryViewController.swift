@@ -18,10 +18,7 @@ class HistoryViewController: UIViewController, UITableViewDelegate, UITableViewD
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let item = HistoryItem()
-
-        item.text = "Ahoj"
-        items.append(item)
+        items.reverse()
 
         tableView.dataSource = self
         tableView.delegate = self
@@ -48,13 +45,44 @@ class HistoryViewController: UIViewController, UITableViewDelegate, UITableViewD
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as? HistoryCell
+        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as? HistoryCell ?? HistoryCell()
 
-        cell?.item = items[indexPath.row]
+        cell.item = items[indexPath.row]
 
-        return cell ?? HistoryCell()
+        return cell
     }
 
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let showedViewController = ShowedViewController()
+        
+        do {
+            let decoded = try JSONDecoder().decode(CellModelArray.self, from: Data(items[indexPath.row].code.utf8))
+            showedViewController.decoded = decoded
+        }
+        catch {
+            print("error")
+        }
+        showedViewController.code = items[indexPath.row].code
 
+        navigationController?.pushViewController(showedViewController, animated: true)
+    }
 
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        do {
+            let realm = try Realm()
+
+            try realm.write {
+                let objects = realm.objects(HistoryItem.self).filter("text = %@ AND date = %@", items[indexPath.row].text, items[indexPath.row].date)
+
+                realm.delete(objects)
+            }
+        } catch {
+            print(error)
+        }
+
+        if editingStyle == .delete {
+            items.remove(at: indexPath.row)
+            tableView.deleteRows(at: [indexPath], with: .fade)
+        }
+    }
 }

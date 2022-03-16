@@ -10,10 +10,11 @@ import AVFoundation
 import SnapKit
 import RealmSwift
 
-class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
+class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
 
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
+    private var imagePicker = UIImagePickerController()
 
     private var cameraView = UIView()
 
@@ -111,43 +112,117 @@ class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDel
     private func prepareBarButtons() {
         let history = UIBarButtonItem(image: UIImage(systemName: "clock"), style: .plain, target: self, action: #selector(historyClick))
 
-        let manualEnter = UIBarButtonItem(image: UIImage(systemName: "chart.bar.doc.horizontal"), style: .plain, target: self, action: #selector(manualEnterClick))
+        let gallerySelection = UIBarButtonItem(image: UIImage(systemName: "photo.fill.on.rectangle.fill"), style: .plain, target: self, action: #selector(galleryClick))
 
-        navigationItem.rightBarButtonItems = [history, manualEnter]
+        navigationItem.rightBarButtonItems = [history, gallerySelection]
     }
 
-    @objc private func manualEnterClick() {
-        let alert = UIAlertController(title: "add manually", message: "", preferredStyle: .alert)
+    func detectQRCode(_ image: UIImage?) -> [CIFeature]? {
+        if let image = image, let ciImage = CIImage.init(image: image){
+            var options: [String: Any]
+            let context = CIContext()
+            options = [CIDetectorAccuracy: CIDetectorAccuracyHigh]
+            let qrDetector = CIDetector(ofType: CIDetectorTypeQRCode, context: context, options: options)
+            if ciImage.properties.keys.contains((kCGImagePropertyOrientation as String)){
+                options = [CIDetectorImageOrientation: ciImage.properties[(kCGImagePropertyOrientation as String)] ?? 1]
+            } else {
+                options = [CIDetectorImageOrientation: 1]
+            }
+            let features = qrDetector?.features(in: ciImage, options: options)
+            return features
 
-        alert.addTextField { (textField) in
-            textField.placeholder = "QR Code"
         }
-
-        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { [weak alert] (_) in
-            let textField = alert?.textFields?[0]
-            self.found(code: textField?.text ?? "")
-        }))
-
-        self.present(alert, animated: true, completion: nil)
+        return nil
     }
+
+    @objc private func galleryClick() {
+        if UIImagePickerController.isSourceTypeAvailable(.savedPhotosAlbum){
+            imagePicker.delegate = self
+            imagePicker.sourceType = .savedPhotosAlbum
+            imagePicker.allowsEditing = false
+
+            present(imagePicker, animated: true, completion: nil)
+        }
+    }
+
+    public func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        if let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
+            if let features = detectQRCode(image), !features.isEmpty{
+                for case let row as CIQRCodeFeature in features{
+                    found(code: row.messageString ?? "")
+                }
+            }
+        }
+        self.dismiss(animated: true, completion: nil)
+    }
+
+    private var historyController = HistoryViewController()
 
     private func found(code: String) {
         let showedViewController = ShowedViewController()
         showedViewController.code = code
 
         let historyItem = HistoryItem()
-        historyItem.text = code
+
+        do {
+            let decoded = try JSONDecoder().decode(CellModelArray.self, from: Data(code.utf8))
+            showedViewController.decoded = decoded
+            historyItem.text = decoded.name ?? ""
+        }
+        catch {
+            print("error")
+        }
+
+        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short)
+        historyItem.date = timestamp
+        
+        historyItem.code = code
+
+
+        do {
+            let realm = try Realm()
+
+            try realm.write({
+                realm.add(historyItem)
+            })
+        } catch {
+            print(error)
+        }
 
         navigationController?.pushViewController(showedViewController, animated: true)
-
-        print(code)
     }
 
     @objc private func historyClick() {
-        let historyController = HistoryViewController()
+        do {
+            let realm = try Realm()
+
+            let swiftArrayText = (realm.objects(HistoryItem.self).value(forKey: "text") as? NSArray ?? NSArray()).compactMap({ $0 as? String })
+            let swiftArrayCode = (realm.objects(HistoryItem.self).value(forKey: "code") as? NSArray ?? NSArray()).compactMap({ $0 as? String })
+            let swiftArrayDate = (realm.objects(HistoryItem.self).value(forKey: "date") as? NSArray ?? NSArray()).compactMap({ $0 as? String })
+
+            for i in swiftArrayText {
+                let historyItem = HistoryItem()
+                historyItem.text = i
+                historyController.items.append(historyItem)
+            }
+
+            var counter = 0
+            for i in swiftArrayCode {
+                historyController.items[counter].code = i
+                counter += 1
+            }
+            counter = 0
+
+            for i in swiftArrayDate {
+                historyController.items[counter].date = i
+                counter += 1
+            }
+
+        } catch {
+            print(error)
+        }
 
         navigationController?.pushViewController(historyController, animated: true)
     }
 
 }
-

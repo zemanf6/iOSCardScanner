@@ -30,22 +30,35 @@ class HistoryCell: UITableViewCell {
 
     private func prepareView() {
         prepareNameLabel()
+        prepareDateLabel()
     }
 
     private func prepareData() {
         nameLabel.text = item.text
+        dateLabel.text = item.date
     }
 
     private func prepareNameLabel() {
         contentView.addSubview(nameLabel)
 
+        nameLabel.font = .boldSystemFont(ofSize: 17)
+
         nameLabel.snp.makeConstraints { make in
-            make.center.equalToSuperview()
+            make.leading.equalToSuperview().offset(25)
+            make.centerY.equalToSuperview()
         }
     }
 
     private func prepareDateLabel() {
         contentView.addSubview(dateLabel)
+        dateLabel.textAlignment = .right
+        dateLabel.textColor = .gray
+        dateLabel.font = .systemFont(ofSize: 12)
+
+        dateLabel.snp.makeConstraints { make in
+            make.centerY.equalToSuperview()
+            make.trailing.equalToSuperview().offset(-25)
+        }
     }
 
 }

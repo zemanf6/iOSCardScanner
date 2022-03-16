@@ -6,8 +6,10 @@
 //
 
 import Foundation
+import RealmSwift
 
-class HistoryItem {
-    var text = String()
-    var date = Date()
+class HistoryItem: Object {
+    @objc var text = String()
+    @objc var date = String()
+    @objc var code = String()
 }

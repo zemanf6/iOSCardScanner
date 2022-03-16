@@ -6,11 +6,21 @@
 //
 
 import UIKit
+import SnapKit
 
 class CreatingViewController: UIViewController {
     private let edgeConstraint = 15
     private let heightConstraint = 135.0
     private var topConstraint = 40
+    private var bottomConstraint: Constraint?
+    private var cellCount = 0 {
+        willSet {
+            if cellCount >= 7 {
+                navigationItem.rightBarButtonItems?[0].isEnabled = false
+                navigationItem.leftBarButtonItems?[0].isEnabled = false
+            }
+        }
+    }
 
     private var models = [CellModel]()
 
@@ -23,14 +33,6 @@ class CreatingViewController: UIViewController {
         view.addGestureRecognizer(UITapGestureRecognizer(target: view, action: #selector(UIView.endEditing(_:))))
         prepareScrollView()
         prepareTopButtons()
-    }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-
-        scrollView.contentSize = CGSize(
-            width: view.frame.size.width, height: view.frame.size.height - 150
-        )
     }
 
     private func prepareScrollView() {
@@ -52,13 +54,16 @@ class CreatingViewController: UIViewController {
     }
 
     private func prepareTopButtons() {
-        navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "square.split.2x1"), style: .plain, target: self, action: #selector(addHalfView))
+        var leftButtonItems = [UIBarButtonItem]()
+        leftButtonItems.append(UIBarButtonItem(image: UIImage(systemName: "square.split.2x1"), style: .plain, target: self, action: #selector(addHalfView)))
 
         var rightButtonItems = [UIBarButtonItem]()
 
         rightButtonItems.append(UIBarButtonItem(image: UIImage(systemName: "rectangle"), style: .plain, target: self, action: #selector(addFullView)))
 
         rightButtonItems.append(UIBarButtonItem(image: UIImage(systemName: "checkmark"), style: .plain, target: self, action: #selector(createCard)))
+
+        navigationItem.leftBarButtonItems = leftButtonItems
 
         navigationItem.rightBarButtonItems = rightButtonItems
 
@@ -67,12 +72,13 @@ class CreatingViewController: UIViewController {
     @objc private func addHalfView() {
         let halfCell = HalfCell()
         scrollView.addSubview(halfCell)
-
+        bottomConstraint?.deactivate()
         halfCell.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(edgeConstraint)
             make.trailing.equalToSuperview().offset(-210)
             make.top.equalToSuperview().offset(topConstraint)
             make.height.equalTo(heightConstraint)
+            bottomConstraint = make.bottom.equalToSuperview().constraint
         }
 
         let halfCell2 = HalfCell()
@@ -85,20 +91,24 @@ class CreatingViewController: UIViewController {
         }
 
         topConstraint += 155
+        cellCount += 1
     }
+
 
     @objc private func addFullView() {
         let fullCell = FullCell()
         scrollView.addSubview(fullCell)
-        
+        bottomConstraint?.deactivate()
         fullCell.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(edgeConstraint)
             make.trailing.equalToSuperview().offset(-edgeConstraint)
             make.top.equalToSuperview().offset(topConstraint)
             make.height.equalTo(heightConstraint * 1.3)
+            bottomConstraint = make.bottom.equalToSuperview().constraint
         }
 
         topConstraint += 195
+        cellCount += 1
     }
 
     @objc private func createCard() {
@@ -130,19 +140,31 @@ class CreatingViewController: UIViewController {
         present(ac, animated: true, completion: nil)
     }
 
+    @objc func image(_ image: UIImage, didFinishSavingWithError error: Error?, contextInfo: UnsafeRawPointer) {
+        if let error = error {
+            let ac = UIAlertController(title: "Save error", message: error.localizedDescription, preferredStyle: .alert)
+            ac.addAction(UIAlertAction(title: "OK", style: .default))
+            present(ac, animated: true)
+        } else {
+            let ac = UIAlertController(title: "Saved!", message: "Your QR code has been saved in our gallery", preferredStyle: .alert)
+            ac.addAction(UIAlertAction(title: "OK", style: .default))
+            present(ac, animated: true)
+        }
+    }
+
     private func completion(ac: UIAlertController, rootModel: CellModelArray) {
         do {
-            rootModel.name = ac.textFields?.first?.text
+            if ac.textFields?.first?.text?.isEmpty ?? true {
+                rootModel.name = "Unknown"
+            }
+            else {
+                rootModel.name = ac.textFields?.first?.text
+            }
             let jsonString = try JSONEncoder().encode(rootModel)
             print(String(data: jsonString, encoding: .utf8) ?? "")
+            let qrCodeImage = self.generateQRCode(from: String(data: jsonString, encoding: .utf8) ?? "") ?? UIImage()
 
-            DispatchQueue.main.async {
-                UIImageWriteToSavedPhotosAlbum(self.generateQRCode(from: String(data: jsonString, encoding: .utf8) ?? "") ?? UIImage(), nil, nil, nil)
-            }
-
-            let acConfirm = UIAlertController(title: "Card created", message: "QR Code was saved to your gallery", preferredStyle: .alert)
-            acConfirm.addAction(UIAlertAction(title: "OK", style: .default))
-            present(acConfirm, animated: true, completion: nil)
+            UIImageWriteToSavedPhotosAlbum(qrCodeImage, self, #selector(self.image(_:didFinishSavingWithError:contextInfo:)), nil)
         }
         catch {
             print(error)
@@ -157,21 +179,14 @@ class CreatingViewController: UIViewController {
             let transform = CGAffineTransform(scaleX: 3, y: 3)
 
             if let output = filter.outputImage?.transformed(by: transform) {
-                return UIImage(ciImage: output)
+                let context:CIContext = CIContext(options: nil)
+                guard let cgImage:CGImage = context.createCGImage(output, from: output.extent) else { return nil }
+                let image:UIImage = UIImage(cgImage: cgImage)
+                return image
             }
         }
 
         return nil
     }
 }
-//TODO
 
-// History
-    //Create new view for history cell
-    //Add date and time
-    //Difference between yours and others cards
-
-// History Realms
-//scrollview
-//Scan QR Code by picture
-//Gallery save

@@ -25,7 +25,7 @@ class TabBarController: UITabBarController {
             prepareViewController(title: "Scanner", imageName: "qrcode",
                                   viewController: ScannerViewController()),
             prepareViewController(title: "Create", imageName: "plus.circle",
-                              viewController: CreatingViewController())]
+                                  viewController: CreatingViewController())]
     }
 
     private func prepareViewController(title: String?, imageName: String?,
