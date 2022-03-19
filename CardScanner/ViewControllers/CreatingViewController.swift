@@ -163,6 +163,7 @@ class CreatingViewController: UIViewController {
             let jsonString = try JSONEncoder().encode(rootModel)
             print(String(data: jsonString, encoding: .utf8) ?? "")
             let qrCodeImage = self.generateQRCode(from: String(data: jsonString, encoding: .utf8) ?? "") ?? UIImage()
+            print(jsonString)
 
             UIImageWriteToSavedPhotosAlbum(qrCodeImage, self, #selector(self.image(_:didFinishSavingWithError:contextInfo:)), nil)
         }
