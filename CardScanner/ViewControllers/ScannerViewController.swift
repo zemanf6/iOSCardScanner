@@ -16,8 +16,6 @@ class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDel
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var imagePicker = UIImagePickerController()
 
-    private var cameraView = UIView()
-
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -156,8 +154,6 @@ class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDel
         self.dismiss(animated: true, completion: nil)
     }
 
-    private var historyController = HistoryViewController()
-
     private func found(code: String) {
         let showedViewController = ShowedViewController()
         showedViewController.code = code
@@ -191,6 +187,8 @@ class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDel
 
         navigationController?.pushViewController(showedViewController, animated: true)
     }
+
+    private var historyController = HistoryViewController()
 
     @objc private func historyClick() {
         do {
